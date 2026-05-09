@@ -1,52 +1,59 @@
 const { log } = require('../logging_middleware/logger');
 
-const getWeight = (t) => {
-    if(t === 'Placement') return 3;
-    if(t === 'Result') return 2;
-    if(t === 'Event') return 1;
-    return 0;
+// Priority Weights: Placement (3) > Result (2) > Event (1)
+const getWeight = (type) => {
+    switch (type) {
+        case 'Placement': return 3;
+        case 'Result': return 2;
+        case 'Event': return 1;
+        default: return 0;
+    }
 };
 
 async function getTopNotifications(n = 10) {
     try {
-        log('info', 'starting to fetch from api...');
+        log('INFO', 'Fetching notifications from API...');
         
-        let res = await fetch('http://4.224.186.213/evaluation-service/notifications');
+        // We use fetch which is built-in to newer Node.js versions (v18+)
+        const response = await fetch('http://4.224.186.213/evaluation-service/notifications');
         
-        if (!res.ok) {
-            throw new Error(`got error code: ${res.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        let data = await res.json();
-        let notifs = data.notifications;
-        if(!notifs) notifs = [];
+        const data = await response.json();
+        const notifications = data.notifications || [];
 
-        log('info', `we got ${notifs.length} items. sorting them now...`);
+        log('INFO', `Fetched ${notifications.length} notifications. Sorting...`);
 
-        notifs.sort((x, y) => {
-            let wx = getWeight(x.Type);
-            let wy = getWeight(y.Type);
+        // Sort by weight (descending) and then recency (descending)
+        notifications.sort((a, b) => {
+            const weightA = getWeight(a.Type);
+            const weightB = getWeight(b.Type);
 
-            if (wx !== wy) {
-                return wy - wx; 
+            if (weightA !== weightB) {
+                // Higher weight comes first
+                return weightB - weightA;
             }
             
-            let tx = new Date(x.Timestamp).getTime();
-            let ty = new Date(y.Timestamp).getTime();
-            return ty - tx;
+            // If weights are equal, sort by Timestamp (newer comes first)
+            const timeA = new Date(a.Timestamp).getTime();
+            const timeB = new Date(b.Timestamp).getTime();
+            return timeB - timeA;
         });
 
-        let finalNotifs = notifs.slice(0, n);
+        const topN = notifications.slice(0, n);
         
-        log('info', `Here are the top ${n}:`);
-        finalNotifs.forEach((item, i) => {
-            log('info', `${i + 1}. [${item.Type}] ${item.Message} - ${item.Timestamp}`);
+        log('INFO', `Top ${n} Notifications:`);
+        topN.forEach((notif, index) => {
+            log('INFO', `${index + 1}. [${notif.Type}] ${notif.Message} (${notif.Timestamp})`);
         });
 
-        return finalNotifs;
-    } catch (err) {
-        log('error', `fetch failed: ${err.message}`);
+        return topN;
+    } catch (error) {
+        log('ERROR', `Failed to fetch or process notifications: ${error.message}`);
     }
 }
 
+// Execute
 getTopNotifications(10);
