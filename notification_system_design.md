@@ -2,20 +2,14 @@
 
 ## Stage 1
 
-### Approach for Top 'n' Priority Notifications
-The requirement is to introduce a Priority Inbox that displays the top 'n' most important unread notifications. Priority is determined by a combination of weight (`Placement` > `Result` > `Event`) and recency.
+### How I got the top N notifications
+For the priority inbox, we need to show the top N unread notifications based on their type and when they came in. 
 
-**Implementation Logic:**
-1. **Fetching:** We fetch the current list of notifications from the provided API endpoint.
-2. **Weight Assignment:** We assign a numerical weight to each notification type to easily compare them:
-   - `Placement`: 3
-   - `Result`: 2
-   - `Event`: 1
-3. **Sorting:** 
-   - We use the standard array `sort` method. 
-   - First, we compare the weights of two notifications. The one with the higher weight is placed first.
-   - If two notifications have the exact same weight (e.g., both are `Result`), we then compare their `Timestamp`. The notification with the more recent timestamp is placed first.
-4. **Extraction:** After sorting the entire list, we simply take the first `n` elements (e.g., `notifications.slice(0, 10)`).
-5. **Efficiency Note:** While sorting the entire list is `O(N log N)`, it is perfectly adequate and very simple for relatively small arrays (like what a typical user inbox might hold unread). If the number of unread notifications scales to millions, a more efficient approach would be to use a Min-Heap of size `n` which would achieve `O(N log k)` time complexity. However, for a beginner-friendly approach in a frontend/BFF context, simple sorting is clean and maintainable.
+Here is my logic for the implementation:
+1. I fetch all the notifications from the provided API endpoint.
+2. I mapped out the weights for the different types. `Placement` gets a 3, `Result` gets a 2, and `Event` gets a 1. 
+3. I used the standard javascript `.sort()` method to sort the array. First it compares the weights, and if the weights are the exact same (like two Results), it checks the Timestamp and puts the newer one first.
+4. After everything is sorted, I just use `.slice(0, n)` to grab the top ones.
+5. Using `.sort()` is fine here since the number of unread notifications isn't going to be huge. If we start getting millions of notifications, we might need a heap or DB query, but for this challenge it works perfectly and keeps the logic simple to read.
 
-**Logging:** All operations are logged extensively using the mandated `logging_middleware`.
+I also wrapped everything with the required logging middleware to track the fetches and errors.
